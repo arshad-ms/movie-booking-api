@@ -4,9 +4,13 @@ import com.example.moviebookingapi.model.*;
 import com.example.moviebookingapi.repository.BookingRepository;
 import com.example.moviebookingapi.repository.SeatRepository;
 import com.example.moviebookingapi.repository.ShowtimeRepository;
+import com.example.moviebookingapi.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -24,6 +28,9 @@ public class BookingService {
 
     @Autowired
     private BookingRepository bookingRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Transactional
     public Booking createBooking(Long showtimeId, List<Long> seatIds) {
@@ -60,8 +67,18 @@ public class BookingService {
 
         Booking booking = new Booking();
 
-        // TODO: Get userId from Spring Security Authentication instead of hardcoding it
-        booking.setUserId(1L);
+        // Get currently authenticated user
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            throw new RuntimeException("User is not Authenticated");
+        }
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String email = userDetails.getUsername();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow( () -> new RuntimeException("User not found") );
+
+        // Associate booking with the actual logged-in user
+        booking.setUser(user);
 
         booking.setShowtime(showtime);
 
