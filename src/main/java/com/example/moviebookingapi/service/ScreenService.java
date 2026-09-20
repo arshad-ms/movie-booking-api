@@ -1,5 +1,6 @@
 package com.example.moviebookingapi.service;
 
+import com.example.moviebookingapi.exception.ResourceNotFoundException;
 import com.example.moviebookingapi.model.Screen;
 import com.example.moviebookingapi.model.Seat;
 import com.example.moviebookingapi.model.SeatStatus;
@@ -23,7 +24,7 @@ public class ScreenService {
 
     public Screen createScreen(Long theatreId, Integer screenNumber, Integer totalSeats) {
         Theater theatre = theaterRepository.findById(theatreId)
-                .orElseThrow(() -> new RuntimeException("Theatre not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Theatre " + theatreId + " not found"));
 
         Screen screen = new Screen();
         screen.setScreenNumber(screenNumber);

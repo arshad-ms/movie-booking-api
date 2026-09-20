@@ -1,5 +1,9 @@
 package com.example.moviebookingapi.service;
 
+import com.example.moviebookingapi.exception.InvalidBookingException;
+import com.example.moviebookingapi.exception.ResourceNotFoundException;
+import com.example.moviebookingapi.exception.SeatUnavailableException;
+import com.example.moviebookingapi.exception.UserNotAuthenticatedException;
 import com.example.moviebookingapi.model.*;
 import com.example.moviebookingapi.repository.BookingRepository;
 import com.example.moviebookingapi.repository.SeatRepository;
@@ -14,7 +18,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -36,32 +39,32 @@ public class BookingService {
     public Booking createBooking(Long showtimeId, List<Long> seatIds) {
 
         if (seatIds == null || seatIds.isEmpty()) {
-            throw new RuntimeException("At least one seat must be selected");
+            throw new InvalidBookingException("At least one seat must be selected");
         }
 
         if (seatIds.size() != seatIds.stream().distinct().count()) {
-            throw new RuntimeException("Duplicate seat IDs are not allowed");
+            throw new InvalidBookingException("Duplicate seat IDs are not allowed");
         }
 
 
         Showtime showtime = showtimeRepository.findById(showtimeId)
-                .orElseThrow(() -> new RuntimeException("show doesn't exist"));
+                .orElseThrow(() -> new ResourceNotFoundException("Showtime not found with id: " + showtimeId));
 
         List<Seat> selectedSeats = seatRepository.findAllById(seatIds);
 
         if (selectedSeats.size() != seatIds.size()) {
-            throw new RuntimeException("One or more seats don't exist");
+            throw new ResourceNotFoundException("One or more seats don't exist");
         }
 
         for (Seat seat: selectedSeats) {
             // validation: Ensure all seats belong to the Screen of that Showtime
-            if(! seat.getScreen().getId().equals(showtime.getScreen().getId()) ){
-                throw new RuntimeException("Seats doesn't match the provided screen");
+            if(!seat.getScreen().getId().equals(showtime.getScreen().getId())){
+                throw new InvalidBookingException("Seat " + seat.getId() + " does not belong to the show's screen");
             }
 
             // validation: Check for Unavailable seats
             if(!seat.getStatus().equals(SeatStatus.AVAILABLE)){
-                throw new RuntimeException("Seat " + seat.getId() + " is not available");
+                throw new SeatUnavailableException("Seat " + seat.getId() + " is not available");
             }
         }
 
@@ -70,12 +73,12 @@ public class BookingService {
         // Get currently authenticated user
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
-            throw new RuntimeException("User is not Authenticated");
+            throw new UserNotAuthenticatedException("User is not Authenticated");
         }
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         String email = userDetails.getUsername();
         User user = userRepository.findByEmail(email)
-                .orElseThrow( () -> new RuntimeException("User not found") );
+                .orElseThrow( () -> new ResourceNotFoundException("User not found with email: " + email) );
 
         // Associate booking with the actual logged-in user
         booking.setUser(user);

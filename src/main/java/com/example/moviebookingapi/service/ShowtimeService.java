@@ -1,5 +1,7 @@
 package com.example.moviebookingapi.service;
 
+import com.example.moviebookingapi.exception.ResourceNotFoundException;
+import com.example.moviebookingapi.exception.TheaterScreenMismatchException;
 import com.example.moviebookingapi.model.Movie;
 import com.example.moviebookingapi.model.Screen;
 import com.example.moviebookingapi.model.Seat;
@@ -29,20 +31,17 @@ public class ShowtimeService {
     @Autowired
     private SeatRepository seatRepository;
 
-    public Showtime createShowtime(Long movieId,
-                                   Long screenId,
-                                   Long theaterId,
-                                   LocalDateTime startTime,
-                                   Integer durationMinutes) {
+    public Showtime createShowtime(Long movieId, Long screenId, Long theaterId,
+                                   LocalDateTime startTime, Integer durationMinutes) {
         Movie movie = movieRepository.findById(movieId)
-                .orElseThrow(() -> new RuntimeException("Movie not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Movie " + movieId + " not found"));
 
         Screen screen = screenRepository.findById(screenId)
-                .orElseThrow(() -> new RuntimeException("Screen not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Screen " + screenId + " not found"));
 
         // NEW VALIDATION: If the frontend sent a theatreId, cross-check it!
         if (theaterId != null && !screen.getTheater().getId().equals(theaterId)) {
-            throw new RuntimeException("Theatre ID mismatch: The screen does not belong to this theatre!");
+            throw new TheaterScreenMismatchException("Theatre ID mismatch: The screen does not belong to this theatre!");
         }
 
         Showtime showtime = new Showtime();
@@ -56,7 +55,7 @@ public class ShowtimeService {
 
     public List<Seat> getSeatsByShowtime(Long id){
         Showtime showtime = showtimeRepository.findById(id)
-                .orElseThrow(()-> new RuntimeException("Showtime doesn't exist"));
+                .orElseThrow(()-> new ResourceNotFoundException("Showtime " + id + " doesn't exist"));
 
         Long screenId = showtime.getScreen().getId();
         return seatRepository.findByScreenId(screenId);

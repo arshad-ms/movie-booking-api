@@ -1,5 +1,7 @@
 package com.example.moviebookingapi.config;
 
+import com.example.moviebookingapi.security.JwtAccessDeniedHandler;
+import com.example.moviebookingapi.security.JwtAuthenticationEntryPoint;
 import com.example.moviebookingapi.security.JwtAuthenticationFilter;
 import com.example.moviebookingapi.service.CustomUserDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +26,12 @@ public class SecurityConfig {
 
     @Autowired
     private JwtAuthenticationFilter  jwtAuthenticationFilter;
+
+    @Autowired
+    private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+
+    @Autowired
+    private JwtAccessDeniedHandler jwtAccessDeniedHandler;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -55,6 +63,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/login").permitAll()
                         .anyRequest().authenticated())
+
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+                        .accessDeniedHandler(jwtAccessDeniedHandler)
+                )
 
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
