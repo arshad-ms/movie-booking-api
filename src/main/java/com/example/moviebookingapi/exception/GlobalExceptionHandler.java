@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -80,6 +81,29 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.CONFLICT,
                 "Seat was just taken by someone else, please refresh", request);
 
+    }
+
+    @ExceptionHandler(UserAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleUserAlreadyExistsException(
+            UserAlreadyExistsException ex, HttpServletRequest request) {
+
+        logger.warn("Registration rejected. {} at {}: {}", ex.getClass().getSimpleName(), request.getRequestURI(), ex.getMessage());
+
+        return buildErrorResponse(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(
+            MethodArgumentNotValidException ex, HttpServletRequest request) {
+
+        String message = ex.getBindingResult()
+                .getFieldErrors()
+                .getFirst()
+                .getDefaultMessage();
+
+        logger.warn("{} at {}: {}", ex.getClass().getSimpleName(), request.getRequestURI(), ex.getMessage());
+
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, message, request);
     }
 
     @ExceptionHandler(Exception.class)

@@ -21,7 +21,8 @@ public class CustomUserDetailsService implements UserDetailsService {
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail())
                 .password(user.getPassword())
-                .roles(user.getRole())
+//                .roles(user.getRole()) // adds ROLE_ to the actual role (ex: USER) but stores "USER" only in db
+                .authorities(user.getRole()) // adds the actual role directly, so we can pass ROLE_USER clearly to store in db
                 .build() ;
     }
 }
