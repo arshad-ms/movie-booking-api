@@ -1,7 +1,9 @@
 package com.example.moviebookingapi.controller;
 
-import com.example.moviebookingapi.model.Theater;
+import com.example.moviebookingapi.dto.TheaterRequestDTO;
+import com.example.moviebookingapi.dto.TheaterResponseDTO;
 import com.example.moviebookingapi.service.TheaterService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,7 +18,7 @@ public class TheaterController {
     private TheaterService theatreService;
 
     @PostMapping
-    public Theater createTheatre(@RequestBody Theater theatre) {
-        return theatreService.createTheater(theatre);
+    public TheaterResponseDTO createTheatre(@Valid @RequestBody TheaterRequestDTO theatreRequestDTO) {
+        return theatreService.createTheater(theatreRequestDTO);
     }
 }

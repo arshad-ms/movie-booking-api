@@ -7,9 +7,12 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class MovieDTO {
+public class ScreenResponseDTO {
+
     private Long id;
-    private String title;
-    private String genre;
-    private Integer duration;
+    private Integer screenNumber;
+    private Integer totalSeats;
+    private Long theatreId;
+    private String theatreName;
+    private Integer seatCount;
 }

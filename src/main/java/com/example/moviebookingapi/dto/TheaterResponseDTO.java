@@ -7,8 +7,10 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class TheaterDTO {
+public class TheaterResponseDTO {
     private Long id;
     private String name;
     private String location;
+    private Integer screenCount;
+
 }

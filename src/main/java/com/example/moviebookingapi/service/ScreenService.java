@@ -1,6 +1,9 @@
 package com.example.moviebookingapi.service;
 
+import com.example.moviebookingapi.dto.ScreenRequestDTO;
+import com.example.moviebookingapi.dto.ScreenResponseDTO;
 import com.example.moviebookingapi.exception.ResourceNotFoundException;
+import com.example.moviebookingapi.mapper.ScreenMapper;
 import com.example.moviebookingapi.model.Screen;
 import com.example.moviebookingapi.model.Seat;
 import com.example.moviebookingapi.model.SeatStatus;
@@ -22,21 +25,25 @@ public class ScreenService {
     @Autowired
     private TheaterRepository theaterRepository;
 
-    public Screen createScreen(Long theatreId, Integer screenNumber, Integer totalSeats) {
-        Theater theatre = theaterRepository.findById(theatreId)
-                .orElseThrow(() -> new ResourceNotFoundException("Theatre " + theatreId + " not found"));
+    public ScreenResponseDTO createScreen(ScreenRequestDTO screenRequestDTO) {
+        Theater theatre = theaterRepository.findById(screenRequestDTO.getTheatreId())
+                .orElseThrow(() -> new ResourceNotFoundException("Theatre " + screenRequestDTO.getTheatreId() + " not found"));
 
-        Screen screen = new Screen();
-        screen.setScreenNumber(screenNumber);
-        screen.setTotalSeats(totalSeats);
-        screen.setTheater(theatre);
+        Screen screen = ScreenMapper.toEntity(screenRequestDTO, theatre);
 
         // Auto-generate seats (e.g., A1, A2... B1, B2...)
         List<Seat> seats = new ArrayList<>();
-        int rows = (int) Math.ceil(totalSeats / 10.0); // 10 seats per row
+
+        int totalSeats = screenRequestDTO.getTotalSeats();
+
+        // 10 seats per row
+        int rows = (int) Math.ceil(totalSeats / 10.0);
+
         for (int row = 0; row < rows; row++) {
+
             char rowLetter = (char) ('A' + row);
             int seatsInThisRow = Math.min(10, totalSeats - (row * 10));
+
             for (int seatNum = 1; seatNum <= seatsInThisRow; seatNum++) {
                 Seat seat = new Seat();
                 seat.setRowLetter(String.valueOf(rowLetter));
@@ -48,7 +55,9 @@ public class ScreenService {
         }
         screen.setSeats(seats);
 
-        return screenRepository.save(screen);
+        Screen savedScreen = screenRepository.save(screen);
+
+        return ScreenMapper.toResponseDTO(savedScreen);
     }
 
 }

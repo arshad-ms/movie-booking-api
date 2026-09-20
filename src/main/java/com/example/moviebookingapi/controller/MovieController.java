@@ -1,8 +1,9 @@
 package com.example.moviebookingapi.controller;
 
-import com.example.moviebookingapi.model.Movie;
-import com.example.moviebookingapi.repository.MovieRepository;
+import com.example.moviebookingapi.dto.MovieRequestDTO;
+import com.example.moviebookingapi.dto.MovieResponseDTO;
 import com.example.moviebookingapi.service.MovieService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,12 +17,12 @@ public class MovieController {
     private MovieService movieService;
 
     @PostMapping
-    public Movie createMovie(@RequestBody Movie movie) {
-        return movieService.createMovie(movie);
+    public MovieResponseDTO createMovie(@Valid @RequestBody MovieRequestDTO movieRequestDTO) {
+        return movieService.createMovie(movieRequestDTO);
     }
 
     @GetMapping
-    public List<Movie> getMovies() {
+    public List<MovieResponseDTO> getMovies() {
         return movieService.getMovies();
     }
 }
