@@ -1,15 +1,18 @@
 package com.example.moviebookingapi.service;
 
+import com.example.moviebookingapi.dto.SeatResponseDTO;
+import com.example.moviebookingapi.dto.ShowtimeRequestDTO;
+import com.example.moviebookingapi.dto.ShowtimeResponseDTO;
 import com.example.moviebookingapi.exception.ResourceNotFoundException;
 import com.example.moviebookingapi.exception.TheaterScreenMismatchException;
-import com.example.moviebookingapi.model.Movie;
-import com.example.moviebookingapi.model.Screen;
-import com.example.moviebookingapi.model.Seat;
-import com.example.moviebookingapi.model.Showtime;
+import com.example.moviebookingapi.mapper.SeatMapper;
+import com.example.moviebookingapi.mapper.ShowtimeMapper;
+import com.example.moviebookingapi.model.*;
 import com.example.moviebookingapi.repository.MovieRepository;
 import com.example.moviebookingapi.repository.ScreenRepository;
 import com.example.moviebookingapi.repository.SeatRepository;
 import com.example.moviebookingapi.repository.ShowtimeRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -31,33 +34,40 @@ public class ShowtimeService {
     @Autowired
     private SeatRepository seatRepository;
 
-    public Showtime createShowtime(Long movieId, Long screenId, Long theaterId,
-                                   LocalDateTime startTime, Integer durationMinutes) {
-        Movie movie = movieRepository.findById(movieId)
-                .orElseThrow(() -> new ResourceNotFoundException("Movie " + movieId + " not found"));
+    @Autowired
+    private ShowtimeMapper showtimeMapper;
 
-        Screen screen = screenRepository.findById(screenId)
-                .orElseThrow(() -> new ResourceNotFoundException("Screen " + screenId + " not found"));
+    @Autowired
+    private SeatMapper seatMapper;
+
+    @Transactional
+    public ShowtimeResponseDTO createShowtime(ShowtimeRequestDTO showtimeRequestDTO) {
+        Movie movie = movieRepository.findById(showtimeRequestDTO.getMovieId())
+                .orElseThrow(() -> new ResourceNotFoundException("Movie " + showtimeRequestDTO.getMovieId() + " not found"));
+
+        Screen screen = screenRepository.findById(showtimeRequestDTO.getScreenId())
+                .orElseThrow(() -> new ResourceNotFoundException("Screen " + showtimeRequestDTO.getScreenId() + " not found"));
 
         // NEW VALIDATION: If the frontend sent a theatreId, cross-check it!
-        if (theaterId != null && !screen.getTheater().getId().equals(theaterId)) {
-            throw new TheaterScreenMismatchException("Theatre ID mismatch: The screen does not belong to this theatre!");
-        }
+//        if (theaterId != null && !screen.getTheater().getId().equals(theaterId)) {
+//            throw new TheaterScreenMismatchException("Theatre ID mismatch: The screen does not belong to this theatre!");
+//        }
 
-        Showtime showtime = new Showtime();
-        showtime.setMovie(movie);
-        showtime.setScreen(screen);
-        showtime.setStartTime(startTime);
-        showtime.setEndTime(startTime.plusMinutes(durationMinutes));
+        Showtime showtime = showtimeMapper.toEntity(showtimeRequestDTO,  movie, screen);
 
-        return showtimeRepository.save(showtime);
+        Showtime savedShowtime = showtimeRepository.save(showtime);
+
+        long availableSeatCount = seatRepository.countByScreenIdAndStatus(screen.getId(), SeatStatus.AVAILABLE);
+
+        return showtimeMapper.toResponseDTO(savedShowtime, availableSeatCount);
     }
 
-    public List<Seat> getSeatsByShowtime(Long id){
+    @Transactional
+    public List<SeatResponseDTO> getSeatsByShowtime(Long id){
         Showtime showtime = showtimeRepository.findById(id)
                 .orElseThrow(()-> new ResourceNotFoundException("Showtime " + id + " doesn't exist"));
 
         Long screenId = showtime.getScreen().getId();
-        return seatRepository.findByScreenId(screenId);
+        return seatMapper.toResponseDTOList( seatRepository.findByScreenId(screenId) );
     }
 }

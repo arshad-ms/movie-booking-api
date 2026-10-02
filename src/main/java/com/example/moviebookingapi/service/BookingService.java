@@ -1,9 +1,12 @@
 package com.example.moviebookingapi.service;
 
+import com.example.moviebookingapi.dto.BookingRequestDTO;
+import com.example.moviebookingapi.dto.BookingResponseDTO;
 import com.example.moviebookingapi.exception.InvalidBookingException;
 import com.example.moviebookingapi.exception.ResourceNotFoundException;
 import com.example.moviebookingapi.exception.SeatUnavailableException;
 import com.example.moviebookingapi.exception.UserNotAuthenticatedException;
+import com.example.moviebookingapi.mapper.BookingMapper;
 import com.example.moviebookingapi.model.*;
 import com.example.moviebookingapi.repository.BookingRepository;
 import com.example.moviebookingapi.repository.SeatRepository;
@@ -35,8 +38,13 @@ public class BookingService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private BookingMapper bookingMapper;
+
     @Transactional
-    public Booking createBooking(Long showtimeId, List<Long> seatIds) {
+    public BookingResponseDTO createBooking(BookingRequestDTO bookingRequestDTO) {
+
+        List<Long> seatIds = bookingRequestDTO.getSeatIds();
 
         if (seatIds == null || seatIds.isEmpty()) {
             throw new InvalidBookingException("At least one seat must be selected");
@@ -47,8 +55,8 @@ public class BookingService {
         }
 
 
-        Showtime showtime = showtimeRepository.findById(showtimeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Showtime not found with id: " + showtimeId));
+        Showtime showtime = showtimeRepository.findById(bookingRequestDTO.getShowtimeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Showtime not found with id: " + bookingRequestDTO.getShowtimeId()));
 
         List<Seat> selectedSeats = seatRepository.findAllById(seatIds);
 
@@ -68,8 +76,6 @@ public class BookingService {
             }
         }
 
-        Booking booking = new Booking();
-
         // Get currently authenticated user
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
@@ -79,6 +85,8 @@ public class BookingService {
         String email = userDetails.getUsername();
         User user = userRepository.findByEmail(email)
                 .orElseThrow( () -> new ResourceNotFoundException("User not found with email: " + email) );
+
+        Booking booking = new Booking();
 
         // Associate booking with the actual logged-in user
         booking.setUser(user);
@@ -100,7 +108,9 @@ public class BookingService {
         Booking savedBooking = bookingRepository.save(booking);
         seatRepository.saveAll(selectedSeats);
 
-        return savedBooking;
+        // Build the flattened DTO while we're still inside
+        // the transactional Hibernate session.
+        return bookingMapper.toResponseDTO(savedBooking, selectedSeats);
 
     }
 

@@ -4,10 +4,12 @@ import com.example.moviebookingapi.dto.ScreenRequestDTO;
 import com.example.moviebookingapi.dto.ScreenResponseDTO;
 import com.example.moviebookingapi.model.Screen;
 import com.example.moviebookingapi.model.Theater;
+import org.springframework.stereotype.Component;
 
+@Component
 public class ScreenMapper {
 
-    public static Screen toEntity(ScreenRequestDTO screenDTO, Theater theater) {
+    public Screen toEntity(ScreenRequestDTO screenDTO, Theater theater) {
         return new Screen(
                 null,
                 screenDTO.getScreenNumber(),
@@ -17,7 +19,7 @@ public class ScreenMapper {
         );
     }
 
-    public static ScreenResponseDTO toResponseDTO(Screen screen) {
+    public ScreenResponseDTO toResponseDTO(Screen screen) {
         return new ScreenResponseDTO(
                 screen.getId(),
                 screen.getScreenNumber(),

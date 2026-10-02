@@ -15,7 +15,7 @@ public class Showtime {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
     private LocalDateTime startTime;
     private LocalDateTime endTime;

@@ -3,10 +3,12 @@ package com.example.moviebookingapi.mapper;
 import com.example.moviebookingapi.dto.MovieRequestDTO;
 import com.example.moviebookingapi.dto.MovieResponseDTO;
 import com.example.moviebookingapi.model.Movie;
+import org.springframework.stereotype.Component;
 
+@Component
 public class MovieMapper {
 
-    public static Movie toEntity(MovieRequestDTO movieDTO) {
+    public Movie toEntity(MovieRequestDTO movieDTO) {
         return new Movie(
                 null,
                 movieDTO.getTitle(),
@@ -15,7 +17,7 @@ public class MovieMapper {
         );
     }
 
-    public static MovieResponseDTO toResponseDTO(Movie movie) {
+    public MovieResponseDTO toResponseDTO(Movie movie) {
         return new MovieResponseDTO(
                 movie.getId(),
                 movie.getTitle(),

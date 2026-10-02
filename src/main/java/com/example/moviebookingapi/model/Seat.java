@@ -27,12 +27,10 @@ public class Seat {
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "screen_id")
-    @JsonIgnore
     private Screen screen;
 
     @ManyToOne(optional = true)
     @JoinColumn(name = "currentBooking_id")
-    @JsonIgnore
     private Booking currentBooking;
 
 }

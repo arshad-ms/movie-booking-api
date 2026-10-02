@@ -25,11 +25,14 @@ public class ScreenService {
     @Autowired
     private TheaterRepository theaterRepository;
 
+    @Autowired
+    private ScreenMapper screenMapper;
+
     public ScreenResponseDTO createScreen(ScreenRequestDTO screenRequestDTO) {
         Theater theatre = theaterRepository.findById(screenRequestDTO.getTheatreId())
                 .orElseThrow(() -> new ResourceNotFoundException("Theatre " + screenRequestDTO.getTheatreId() + " not found"));
 
-        Screen screen = ScreenMapper.toEntity(screenRequestDTO, theatre);
+        Screen screen = screenMapper.toEntity(screenRequestDTO, theatre);
 
         // Auto-generate seats (e.g., A1, A2... B1, B2...)
         List<Seat> seats = new ArrayList<>();
@@ -57,7 +60,7 @@ public class ScreenService {
 
         Screen savedScreen = screenRepository.save(screen);
 
-        return ScreenMapper.toResponseDTO(savedScreen);
+        return screenMapper.toResponseDTO(savedScreen);
     }
 
 }

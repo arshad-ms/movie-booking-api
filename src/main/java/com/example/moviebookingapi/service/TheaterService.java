@@ -14,11 +14,14 @@ public class TheaterService {
     @Autowired
     private TheaterRepository theaterRepository;
 
+    @Autowired
+    private TheaterMapper theaterMapper;
+
     public TheaterResponseDTO createTheater(TheaterRequestDTO theaterRequestDTO) {
 
-        Theater theater = TheaterMapper.toEntity(theaterRequestDTO);
+        Theater theater = theaterMapper.toEntity(theaterRequestDTO);
         Theater savedTheater = theaterRepository.save(theater);
 
-        return TheaterMapper.toResponseDTO(savedTheater);
+        return theaterMapper.toResponseDTO(savedTheater);
     }
 }

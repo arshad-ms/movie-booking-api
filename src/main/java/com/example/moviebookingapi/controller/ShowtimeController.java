@@ -1,8 +1,13 @@
 package com.example.moviebookingapi.controller;
 
+import com.example.moviebookingapi.dto.SeatResponseDTO;
+import com.example.moviebookingapi.dto.ShowtimeRequestDTO;
+import com.example.moviebookingapi.dto.ShowtimeResponseDTO;
+import com.example.moviebookingapi.mapper.SeatMapper;
 import com.example.moviebookingapi.model.Seat;
 import com.example.moviebookingapi.model.Showtime;
 import com.example.moviebookingapi.service.ShowtimeService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,16 +22,12 @@ public class ShowtimeController {
     private ShowtimeService showtimeService;
 
     @PostMapping
-    public Showtime createShowtime(@RequestParam Long movieId,
-                                   @RequestParam Long screenId,
-                                   @RequestParam(required = false) Long theaterId,
-                                   @RequestParam LocalDateTime startTime,
-                                   @RequestParam Integer durationMinutes) {
-        return showtimeService.createShowtime(movieId, screenId, theaterId, startTime, durationMinutes);
+    public ShowtimeResponseDTO createShowtime(@Valid @RequestBody ShowtimeRequestDTO showtimeRequestDTO) {
+        return showtimeService.createShowtime(showtimeRequestDTO);
     }
 
     @GetMapping("/{id}/seats")
-    public List<Seat> getSeatsByShowtime(@PathVariable Long id){
+    public List<SeatResponseDTO> getSeatsByShowtime(@PathVariable Long id){
         return showtimeService.getSeatsByShowtime(id);
     }
 }

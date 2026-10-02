@@ -16,18 +16,21 @@ public class MovieService {
     @Autowired
     private MovieRepository movieRepository;
 
+    @Autowired
+    private MovieMapper movieMapper;
+
     public MovieResponseDTO createMovie(MovieRequestDTO movieRequestDTO) {
 
-        Movie movie = MovieMapper.toEntity(movieRequestDTO);
+        Movie movie = movieMapper.toEntity(movieRequestDTO);
         Movie savedMovie = movieRepository.save(movie);
 
-        return MovieMapper.toResponseDTO(savedMovie);
+        return movieMapper.toResponseDTO(savedMovie);
     }
 
     public List<MovieResponseDTO> getMovies() {
         return movieRepository.findAll()
                 .stream()
-                .map(MovieMapper::toResponseDTO)
+                .map(movieMapper::toResponseDTO)
                 .toList();
     }
 }

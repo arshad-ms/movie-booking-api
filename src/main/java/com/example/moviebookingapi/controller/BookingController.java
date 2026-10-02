@@ -1,10 +1,10 @@
 package com.example.moviebookingapi.controller;
 
-import com.example.moviebookingapi.dto.BookingRequest;
+import com.example.moviebookingapi.dto.BookingRequestDTO;
+import com.example.moviebookingapi.dto.BookingResponseDTO;
 import com.example.moviebookingapi.model.Booking;
-import com.example.moviebookingapi.model.Seat;
-import com.example.moviebookingapi.model.Showtime;
 import com.example.moviebookingapi.service.BookingService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,7 +18,7 @@ public class BookingController {
     private BookingService bookingService;
 
     @PostMapping
-    public Booking createBooking(@RequestBody BookingRequest bookingRequest) {
-        return bookingService.createBooking(bookingRequest.getShowtimeId(), bookingRequest.getSeatIds());
+    public BookingResponseDTO createBooking(@Valid @RequestBody BookingRequestDTO bookingRequestDTO) {
+        return bookingService.createBooking(bookingRequestDTO);
     }
 }

@@ -1,6 +1,5 @@
 package com.example.moviebookingapi.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -8,7 +7,6 @@ import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Stack;
 
 @Entity
 @Data
@@ -26,7 +24,6 @@ public class Screen {
     // Many screens belong to 1 Theater
     @ManyToOne(optional = false)
     @JoinColumn(name = "theater_id")
-    @JsonIgnore
     private Theater theater;
 
     // 1 Screen has many seats
