@@ -5,6 +5,7 @@ import com.example.moviebookingapi.dto.MovieResponseDTO;
 import com.example.moviebookingapi.service.MovieService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,6 +18,7 @@ public class MovieController {
     private MovieService movieService;
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public MovieResponseDTO createMovie(@Valid @RequestBody MovieRequestDTO movieRequestDTO) {
         return movieService.createMovie(movieRequestDTO);
     }

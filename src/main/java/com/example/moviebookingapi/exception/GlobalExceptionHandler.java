@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -45,16 +46,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidBookingException.class)
     public ResponseEntity<ErrorResponse> handleInvalidBookingException(
             InvalidBookingException ex, HttpServletRequest request) {
-
-        logger.warn("{} at {}: {}", ex.getClass().getSimpleName(), request.getRequestURI(), ex.getMessage());
-
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
-
-    }
-
-    @ExceptionHandler(TheaterScreenMismatchException.class)
-    public ResponseEntity<ErrorResponse> handleTheaterScreenMismatchException(
-            TheaterScreenMismatchException ex, HttpServletRequest request) {
 
         logger.warn("{} at {}: {}", ex.getClass().getSimpleName(), request.getRequestURI(), ex.getMessage());
 
@@ -114,6 +105,18 @@ public class GlobalExceptionHandler {
         logger.warn("Invalid or missing request body at {}: {}", request.getRequestURI(), ex.getMessage());
 
         return buildErrorResponse(HttpStatus.BAD_REQUEST,"Request body is required", request);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(
+            AccessDeniedException ex, HttpServletRequest request ){
+        logger.warn("{} at {}: {}", ex.getClass().getSimpleName(), request.getRequestURI(), ex.getMessage());
+
+        return buildErrorResponse(
+                HttpStatus.FORBIDDEN,
+                "Access Denied. You do not have permission to access this resource.",
+                request
+        );
     }
 
     @ExceptionHandler(Exception.class)

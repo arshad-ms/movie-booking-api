@@ -9,6 +9,7 @@ import com.example.moviebookingapi.model.Showtime;
 import com.example.moviebookingapi.service.ShowtimeService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -22,6 +23,7 @@ public class ShowtimeController {
     private ShowtimeService showtimeService;
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ShowtimeResponseDTO createShowtime(@Valid @RequestBody ShowtimeRequestDTO showtimeRequestDTO) {
         return showtimeService.createShowtime(showtimeRequestDTO);
     }

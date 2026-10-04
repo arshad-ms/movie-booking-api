@@ -5,6 +5,7 @@ import com.example.moviebookingapi.dto.TheaterResponseDTO;
 import com.example.moviebookingapi.service.TheaterService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,6 +19,7 @@ public class TheaterController {
     private TheaterService theatreService;
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public TheaterResponseDTO createTheatre(@Valid @RequestBody TheaterRequestDTO theatreRequestDTO) {
         return theatreService.createTheater(theatreRequestDTO);
     }
