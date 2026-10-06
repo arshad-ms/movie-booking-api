@@ -2,10 +2,8 @@ package com.example.moviebookingapi.service;
 
 import com.example.moviebookingapi.dto.BookingRequestDTO;
 import com.example.moviebookingapi.dto.BookingResponseDTO;
-import com.example.moviebookingapi.exception.InvalidBookingException;
-import com.example.moviebookingapi.exception.ResourceNotFoundException;
-import com.example.moviebookingapi.exception.SeatUnavailableException;
-import com.example.moviebookingapi.exception.UserNotAuthenticatedException;
+import com.example.moviebookingapi.dto.PagedResponseDTO;
+import com.example.moviebookingapi.exception.*;
 import com.example.moviebookingapi.mapper.BookingMapper;
 import com.example.moviebookingapi.model.*;
 import com.example.moviebookingapi.repository.BookingRepository;
@@ -14,7 +12,11 @@ import com.example.moviebookingapi.repository.ShowtimeRepository;
 import com.example.moviebookingapi.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -131,5 +133,148 @@ public class BookingService {
             }
         }
     }
+
+    @Transactional
+    public PagedResponseDTO<BookingResponseDTO> getMyBookings(int page, int size) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        String email = authentication.getName();
+
+        User user = userRepository.findByEmail(email).orElseThrow(
+                () -> new ResourceNotFoundException("User not found with email: " + email)
+        );
+
+//        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = createPageable(page, size);
+        Page<Booking> bookingPage = bookingRepository.findByUserId(user.getId(), pageable);
+
+        List<BookingResponseDTO> content = bookingPage.getContent()
+                .stream()
+                .map(booking -> bookingMapper.toResponseDTO(
+                        booking, seatRepository.findByCurrentBooking(booking)))
+                .toList();
+
+        return new PagedResponseDTO<>(
+                content,
+                bookingPage.getNumber(),
+                bookingPage.getSize(),
+                bookingPage.getTotalElements(),
+                bookingPage.getTotalPages(),
+                bookingPage.isLast()
+        );
+    }
+
+    @Transactional
+    public BookingResponseDTO getBookingById(Long bookingId) {
+
+        Booking booking = bookingRepository.findById(bookingId).orElseThrow(
+                ()-> new ResourceNotFoundException("Booking not found with the id: "+bookingId)
+        );
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        User user = userRepository.findByEmail(email).orElseThrow(
+                ()-> new ResourceNotFoundException("User not found with email: " + email)
+        );
+
+        boolean isAdmin = authentication.getAuthorities()
+                .stream()
+                .anyMatch(authority ->
+                        authority.getAuthority().equals("ROLE_ADMIN"));
+
+        boolean isOwner = booking.getUser().getId().equals(user.getId());
+
+        if(!isAdmin && !isOwner){
+            throw new AccessDeniedException("You do not have permission to access this booking");
+        }
+
+        List<Seat> seats = seatRepository.findByCurrentBooking(booking);
+
+        return bookingMapper.toResponseDTO(booking, seats);
+    }
+
+    @Transactional
+    public PagedResponseDTO<BookingResponseDTO> getAllBookings(int page, int size) {
+        
+//        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = createPageable(page, size);
+
+        Page<Booking> bookingPage = bookingRepository.findAll(pageable);
+
+        List<BookingResponseDTO> content = bookingPage.getContent()
+                .stream()
+                .map(booking -> bookingMapper.toResponseDTO(
+                        booking, seatRepository.findByCurrentBooking(booking)))
+                .toList();
+
+        return new PagedResponseDTO<>(
+                content,
+                bookingPage.getNumber(),
+                bookingPage.getSize(),
+                bookingPage.getTotalElements(),
+                bookingPage.getTotalPages(),
+                bookingPage.isLast()
+        );
+    }
+
+    @Transactional
+    public BookingResponseDTO cancelBooking(Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId).orElseThrow(
+                () -> new ResourceNotFoundException("Booking not found with the id: "+bookingId)
+        );
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if(authentication == null || !authentication.isAuthenticated()){
+            throw new UserNotAuthenticatedException("User not authenticated");
+        }
+
+        String email = authentication.getName();
+
+        User user = userRepository.findByEmail(email).orElseThrow(
+                () -> new ResourceNotFoundException("User not found with email: " + email)
+        );
+
+        boolean isAdmin = authentication.getAuthorities()
+                .stream()
+                .anyMatch(authority ->
+                        authority.getAuthority().equals("ROLE_ADMIN"));
+
+        boolean isOwner = booking.getUser().getId().equals(user.getId());
+
+        if(!isAdmin && !isOwner){
+            throw new AccessDeniedException("You do not have permission to cancel this booking");
+        }
+
+        if(booking.getStatus() != BookingStatus.PENDING && booking.getStatus() != BookingStatus.CONFIRMED){
+            throw new BusinessRuleException("Booking with id " + bookingId
+                    + " cannot be cancelled because its current status is " + booking.getStatus());
+        }
+
+        List<Seat> seats = seatRepository.findByCurrentBooking(booking);
+        for(Seat seat: seats){
+            seat.setStatus(SeatStatus.AVAILABLE);
+            seat.setCurrentBooking(null);
+        }
+
+        booking.setStatus(BookingStatus.CANCELLED);
+
+        seatRepository.saveAll(seats);
+        Booking cancelledBooking = bookingRepository.save(booking);
+
+        return bookingMapper.toResponseDTO(cancelledBooking, seats);
+
+    }
+
+    private Pageable createPageable(int page, int size) {
+
+        int safePage = Math.max(page, 0);
+
+        // TODO: enforce via validation
+        int safeSize = Math.min(Math.max(size, 1), 100);
+
+        return PageRequest.of(safePage, safeSize);
+    }
+
 
 }

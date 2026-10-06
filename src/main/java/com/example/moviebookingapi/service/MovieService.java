@@ -2,9 +2,12 @@ package com.example.moviebookingapi.service;
 
 import com.example.moviebookingapi.dto.MovieRequestDTO;
 import com.example.moviebookingapi.dto.MovieResponseDTO;
+import com.example.moviebookingapi.exception.MovieInUseException;
+import com.example.moviebookingapi.exception.ResourceNotFoundException;
 import com.example.moviebookingapi.mapper.MovieMapper;
 import com.example.moviebookingapi.model.Movie;
 import com.example.moviebookingapi.repository.MovieRepository;
+import com.example.moviebookingapi.repository.ShowtimeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +18,9 @@ public class MovieService {
 
     @Autowired
     private MovieRepository movieRepository;
+
+    @Autowired
+    private ShowtimeRepository showtimeRepository;
 
     @Autowired
     private MovieMapper movieMapper;
@@ -33,4 +39,32 @@ public class MovieService {
                 .map(movieMapper::toResponseDTO)
                 .toList();
     }
+
+    public MovieResponseDTO updateMovie(Long id, MovieRequestDTO movieRequestDTO) {
+        Movie movie = movieRepository.findById(id).orElseThrow(
+                ()-> new ResourceNotFoundException("Movie not found with id " + id)
+        );
+
+        movie.setTitle(movieRequestDTO.getTitle());
+        movie.setGenre(movieRequestDTO.getGenre());
+        movie.setDuration(movieRequestDTO.getDuration());
+
+        Movie updatedMovie = movieRepository.save(movie);
+
+        return movieMapper.toResponseDTO(updatedMovie);
+    }
+
+    public void deleteMovie(Long id) {
+        Movie movie = movieRepository.findById(id).orElseThrow(
+                ()-> new ResourceNotFoundException("Movie not found with id " + id)
+        );
+
+        boolean movieHasShowtimes = showtimeRepository.existsByMovieId(id);
+        if (movieHasShowtimes){
+            throw new MovieInUseException( "Cannot delete movie with id " + id + " because it has associated showtimes");
+        }
+
+        movieRepository.deleteById(id);
+    }
+
 }

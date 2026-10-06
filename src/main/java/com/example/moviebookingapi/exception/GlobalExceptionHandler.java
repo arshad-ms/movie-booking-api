@@ -84,6 +84,25 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
 
+    @ExceptionHandler(MovieInUseException.class)
+    public ResponseEntity<ErrorResponse> handleMovieInUseException(
+            MovieInUseException ex, HttpServletRequest request) {
+
+        logger.warn("{} at {}: {}", ex.getClass().getSimpleName(), request.getRequestURI(), ex.getMessage());
+
+        return buildErrorResponse(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(BusinessRuleException.class)
+    public ResponseEntity<ErrorResponse> handleBusinessRuleException(
+            BusinessRuleException ex, HttpServletRequest request) {
+
+        logger.warn("{} at {}: {}", ex.getClass().getSimpleName(), request.getRequestURI(), ex.getMessage());
+
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    }
+
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(
             MethodArgumentNotValidException ex, HttpServletRequest request) {

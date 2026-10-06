@@ -5,6 +5,7 @@ import com.example.moviebookingapi.dto.MovieResponseDTO;
 import com.example.moviebookingapi.service.MovieService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,4 +28,19 @@ public class MovieController {
     public List<MovieResponseDTO> getMovies() {
         return movieService.getMovies();
     }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public MovieResponseDTO updateMovie(@PathVariable Long id, @Valid @RequestBody MovieRequestDTO movieRequestDTO) {
+        return movieService.updateMovie(id, movieRequestDTO);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteMovie(@PathVariable Long id) {
+        movieService.deleteMovie(id);
+    }
+
+
 }

@@ -2,6 +2,8 @@ package com.example.moviebookingapi.repository;
 
 import com.example.moviebookingapi.model.Booking;
 import com.example.moviebookingapi.model.BookingStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -12,4 +14,7 @@ import java.util.List;
 public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     List<Booking> findByStatusAndExpiresAtBefore(BookingStatus status, LocalDateTime time);
+
+    Page<Booking> findByUserId(Long userId, Pageable pageable);
+
 }
