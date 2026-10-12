@@ -6,10 +6,7 @@ import com.example.moviebookingapi.dto.PagedResponseDTO;
 import com.example.moviebookingapi.exception.*;
 import com.example.moviebookingapi.mapper.BookingMapper;
 import com.example.moviebookingapi.model.*;
-import com.example.moviebookingapi.repository.BookingRepository;
-import com.example.moviebookingapi.repository.SeatRepository;
-import com.example.moviebookingapi.repository.ShowtimeRepository;
-import com.example.moviebookingapi.repository.UserRepository;
+import com.example.moviebookingapi.repository.*;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -23,6 +20,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -36,6 +34,9 @@ public class BookingService {
 
     @Autowired
     private BookingRepository bookingRepository;
+
+    @Autowired
+    private BookingSeatRepository bookingSeatRepository;
 
     @Autowired
     private UserRepository userRepository;
@@ -90,29 +91,49 @@ public class BookingService {
 
         Booking booking = new Booking();
 
-        // Associate booking with the actual logged-in user
         booking.setUser(user);
-
         booking.setShowtime(showtime);
 
         LocalDateTime now = LocalDateTime.now();
+
         booking.setBookingTime(now);
         booking.setExpiresAt(now.plusMinutes(10));
-
         booking.setStatus(BookingStatus.PENDING);
         booking.setTotalPrice(selectedSeats.size() * 10.0);
 
+        // Save the booking first so that it gets its generated ID.
+        Booking savedBooking = bookingRepository.save(booking);
+
+        // historical BookingSeat records
+        List<BookingSeat> bookingSeats = selectedSeats.stream()
+                .map(seat -> {
+
+                    BookingSeat bookingSeat = new BookingSeat();
+
+                    //bookingSeat.setBooking(savedBooking);
+                    bookingSeat.setSeat(seat);
+                    bookingSeat.setPriceAtBooking(10.0);
+                    bookingSeat.setStatus(BookingSeatStatus.RESERVED);
+
+                    savedBooking.addBookingSeat(bookingSeat);
+
+                    return bookingSeat;
+                })
+                .toList();
+
+        bookingSeatRepository.saveAll(bookingSeats);
+
+        // Update the live seat state
         for(Seat seat: selectedSeats){
             seat.setStatus(SeatStatus.RESERVED);
-            seat.setCurrentBooking(booking);
+            seat.setCurrentBooking(savedBooking);
         }
 
-        Booking savedBooking = bookingRepository.save(booking);
         seatRepository.saveAll(selectedSeats);
 
         // Build the flattened DTO while we're still inside
         // the transactional Hibernate session.
-        return bookingMapper.toResponseDTO(savedBooking, selectedSeats);
+        return bookingMapper.toResponseDTO(savedBooking, bookingSeats);
 
     }
 
@@ -125,12 +146,31 @@ public class BookingService {
         for (Booking booking: expiredBookings) {
             booking.setStatus(BookingStatus.EXPIRED);
 
-            // releasing the expired  seats
-            List<Seat> seats = seatRepository.findByCurrentBooking(booking);
-            for (Seat seat: seats){
-                seat.setStatus(SeatStatus.AVAILABLE);
-                seat.setCurrentBooking(null);
+            // historical booking-seat records.
+            List<BookingSeat> bookingSeats = bookingSeatRepository.findByBooking(booking);
+
+            for (BookingSeat bookingSeat : bookingSeats) {
+
+                bookingSeat.setStatus(BookingSeatStatus.EXPIRED);
+
+                // Release the live seat
+                Seat seat = bookingSeat.getSeat();
+
+                if (booking.equals(seat.getCurrentBooking())) {
+                    seat.setStatus(SeatStatus.AVAILABLE);
+                    seat.setCurrentBooking(null);
+                }
             }
+
+            // Managed entities are updated through Hibernate dirty checking.
+//             bookingRepository.save(booking);
+//            bookingSeatRepository.saveAll(bookingSeats);
+//
+//            List<Seat> seats = bookingSeats.stream()
+//                    .map(BookingSeat::getSeat)
+//                    .toList();
+//            seatRepository.saveAll(seats);
+
         }
     }
 
@@ -151,7 +191,7 @@ public class BookingService {
         List<BookingResponseDTO> content = bookingPage.getContent()
                 .stream()
                 .map(booking -> bookingMapper.toResponseDTO(
-                        booking, seatRepository.findByCurrentBooking(booking)))
+                        booking, getBookingSeats(booking)))
                 .toList();
 
         return new PagedResponseDTO<>(
@@ -188,9 +228,11 @@ public class BookingService {
             throw new AccessDeniedException("You do not have permission to access this booking");
         }
 
-        List<Seat> seats = seatRepository.findByCurrentBooking(booking);
+        // List<BookingSeat> bookingSeats = bookingSeatRepository.findByBooking(booking);
+        // return bookingMapper.toResponseDTO(booking, bookingSeats);
 
-        return bookingMapper.toResponseDTO(booking, seats);
+        return bookingMapper.toResponseDTO(booking, getBookingSeats(booking));
+
     }
 
     @Transactional
@@ -204,7 +246,7 @@ public class BookingService {
         List<BookingResponseDTO> content = bookingPage.getContent()
                 .stream()
                 .map(booking -> bookingMapper.toResponseDTO(
-                        booking, seatRepository.findByCurrentBooking(booking)))
+                        booking, getBookingSeats(booking)))
                 .toList();
 
         return new PagedResponseDTO<>(
@@ -246,26 +288,43 @@ public class BookingService {
             throw new AccessDeniedException("You do not have permission to cancel this booking");
         }
 
+        // Only PENDING and CONFIRMED bookings can be cancelled
         if(booking.getStatus() != BookingStatus.PENDING && booking.getStatus() != BookingStatus.CONFIRMED){
             throw new BusinessRuleException("Booking with id " + bookingId
                     + " cannot be cancelled because its current status is " + booking.getStatus());
         }
 
-        List<Seat> seats = seatRepository.findByCurrentBooking(booking);
-        for(Seat seat: seats){
-            seat.setStatus(SeatStatus.AVAILABLE);
-            seat.setCurrentBooking(null);
+        // Get historical BookingSeat records
+        List<BookingSeat> bookingSeats = getBookingSeats(booking);
+
+//        List<Seat> seatsToSave = new ArrayList<>();
+
+        for (BookingSeat bookingSeat : bookingSeats) {
+            bookingSeat.setStatus(BookingSeatStatus.CANCELLED);
+
+            Seat seat = bookingSeat.getSeat();
+
+            // Release only seats still reserved by this booking.
+            if (booking.equals(seat.getCurrentBooking())) {
+                seat.setStatus(SeatStatus.AVAILABLE);
+                seat.setCurrentBooking(null);
+//                seatsToSave.add(seat);
+            }
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
 
-        seatRepository.saveAll(seats);
-        Booking cancelledBooking = bookingRepository.save(booking);
+        // Hibernate dirty checking persists the managed entity changes.
+//        bookingSeatRepository.saveAll(bookingSeats);
+//        seatRepository.saveAll(seatsToSave);
+//
+//        Booking cancelledBooking = bookingRepository.save(booking);
 
-        return bookingMapper.toResponseDTO(cancelledBooking, seats);
+        return bookingMapper.toResponseDTO(booking, bookingSeats);
 
     }
 
+    // helper method
     private Pageable createPageable(int page, int size) {
 
         int safePage = Math.max(page, 0);
@@ -274,6 +333,11 @@ public class BookingService {
         int safeSize = Math.min(Math.max(size, 1), 100);
 
         return PageRequest.of(safePage, safeSize);
+    }
+
+    // helper method
+    private List<BookingSeat> getBookingSeats(Booking booking) {
+        return bookingSeatRepository.findByBooking(booking);
     }
 
 
