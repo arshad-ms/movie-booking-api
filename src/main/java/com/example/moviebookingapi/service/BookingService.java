@@ -7,11 +7,13 @@ import com.example.moviebookingapi.exception.*;
 import com.example.moviebookingapi.mapper.BookingMapper;
 import com.example.moviebookingapi.model.*;
 import com.example.moviebookingapi.repository.*;
+import com.example.moviebookingapi.specification.BookingSpecification;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -22,9 +24,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 @Service
 public class BookingService {
@@ -113,7 +113,6 @@ public class BookingService {
 
                     BookingSeat bookingSeat = new BookingSeat();
 
-                    //bookingSeat.setBooking(savedBooking);
                     bookingSeat.setSeat(seat);
                     bookingSeat.setPriceAtBooking(10.0);
                     bookingSeat.setStatus(BookingSeatStatus.RESERVED);
@@ -173,6 +172,10 @@ public class BookingService {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new UserNotAuthenticatedException("User is not authenticated");
+        }
+
         String email = authentication.getName();
 
         User user = userRepository.findByEmail(email).orElseThrow(
@@ -181,16 +184,12 @@ public class BookingService {
 
         Pageable pageable = createPageable(page, size);
 
-        List<BookingStatus> statusFilter = normalizeStatuses(bookingStatus);
-
-        Page<Booking> bookingPage = bookingRepository.findWithFilters(
-                user.getId(),
-                statusFilter,
-                null,
-                null,
-                null,
-                pageable
+        Specification<Booking> spec = Specification.allOf(
+                BookingSpecification.belongsToUser(user.getId()),
+                BookingSpecification.hasStatusIn(bookingStatus)
         );
+
+        Page<Booking> bookingPage = bookingRepository.findAll(spec, pageable);
 
         return toPagedResponse(bookingPage);
     }
@@ -237,18 +236,15 @@ public class BookingService {
 
         LocalDateTime toTime = toDate == null ? null : toDate.atTime(LocalTime.MAX);
 
-        List<BookingStatus> statusFilter = normalizeStatuses(status);
-        
         Pageable pageable = createPageable(page, size);
 
-        Page<Booking> bookingPage = bookingRepository.findWithFilters(
-                null,
-                statusFilter,
-                fromTime,
-                toTime,
-                movieId,
-                pageable
+        Specification<Booking> spec = Specification.allOf(
+                BookingSpecification.hasStatusIn(status),
+                BookingSpecification.bookingTimeBetween(fromTime, toTime),
+                BookingSpecification.hasMovieId(movieId)
         );
+
+        Page<Booking> bookingPage = bookingRepository.findAll(spec, pageable);
 
         return toPagedResponse(bookingPage);
     }
@@ -323,24 +319,6 @@ public class BookingService {
     // helper method
     private List<BookingSeat> getBookingSeats(Booking booking) {
         return bookingSeatRepository.findByBooking(booking);
-    }
-
-    // helper method
-    private List<BookingStatus> normalizeStatuses(List<BookingStatus> statuses){
-        if(statuses == null || statuses.isEmpty()){
-            // Pass all statuses to avoid binding null/empty to IN.
-            return Arrays.asList(BookingStatus.values());
-        }
-        List<BookingStatus> validStatuses = statuses.stream()
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-
-        if(validStatuses.isEmpty()){
-            return Arrays.asList(BookingStatus.values());
-        }
-
-        return validStatuses;
     }
 
     // helper method

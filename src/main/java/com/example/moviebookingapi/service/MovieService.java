@@ -8,7 +8,9 @@ import com.example.moviebookingapi.mapper.MovieMapper;
 import com.example.moviebookingapi.model.Movie;
 import com.example.moviebookingapi.repository.MovieRepository;
 import com.example.moviebookingapi.repository.ShowtimeRepository;
+import com.example.moviebookingapi.specification.MovieSpecification;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -38,7 +40,12 @@ public class MovieService {
         search = normalizeFilter(search);
         genre = normalizeFilter(genre);
 
-        return movieRepository.searchMovies(search, genre)
+        Specification<Movie> spec = Specification.allOf(
+                MovieSpecification.titleContains(search),
+                MovieSpecification.hasGenre(genre)
+        );
+
+        return movieRepository.findAll(spec)
                 .stream()
                 .map(movieMapper::toResponseDTO)
                 .toList();
