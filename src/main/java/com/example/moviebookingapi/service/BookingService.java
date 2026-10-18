@@ -19,9 +19,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.time.LocalTime;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class BookingService {
@@ -162,20 +165,12 @@ public class BookingService {
                 }
             }
 
-            // Managed entities are updated through Hibernate dirty checking.
-//             bookingRepository.save(booking);
-//            bookingSeatRepository.saveAll(bookingSeats);
-//
-//            List<Seat> seats = bookingSeats.stream()
-//                    .map(BookingSeat::getSeat)
-//                    .toList();
-//            seatRepository.saveAll(seats);
-
         }
     }
 
     @Transactional
-    public PagedResponseDTO<BookingResponseDTO> getMyBookings(int page, int size) {
+    public PagedResponseDTO<BookingResponseDTO> getMyBookings(int page, int size, List<BookingStatus> bookingStatus) {
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         String email = authentication.getName();
@@ -184,24 +179,20 @@ public class BookingService {
                 () -> new ResourceNotFoundException("User not found with email: " + email)
         );
 
-//        Pageable pageable = PageRequest.of(page, size);
         Pageable pageable = createPageable(page, size);
-        Page<Booking> bookingPage = bookingRepository.findByUserId(user.getId(), pageable);
 
-        List<BookingResponseDTO> content = bookingPage.getContent()
-                .stream()
-                .map(booking -> bookingMapper.toResponseDTO(
-                        booking, getBookingSeats(booking)))
-                .toList();
+        List<BookingStatus> statusFilter = normalizeStatuses(bookingStatus);
 
-        return new PagedResponseDTO<>(
-                content,
-                bookingPage.getNumber(),
-                bookingPage.getSize(),
-                bookingPage.getTotalElements(),
-                bookingPage.getTotalPages(),
-                bookingPage.isLast()
+        Page<Booking> bookingPage = bookingRepository.findWithFilters(
+                user.getId(),
+                statusFilter,
+                null,
+                null,
+                null,
+                pageable
         );
+
+        return toPagedResponse(bookingPage);
     }
 
     @Transactional
@@ -228,35 +219,38 @@ public class BookingService {
             throw new AccessDeniedException("You do not have permission to access this booking");
         }
 
-        // List<BookingSeat> bookingSeats = bookingSeatRepository.findByBooking(booking);
-        // return bookingMapper.toResponseDTO(booking, bookingSeats);
-
         return bookingMapper.toResponseDTO(booking, getBookingSeats(booking));
 
     }
 
     @Transactional
-    public PagedResponseDTO<BookingResponseDTO> getAllBookings(int page, int size) {
+    public PagedResponseDTO<BookingResponseDTO> getAllBookings(
+            int page, int size, List<BookingStatus> status, LocalDate fromDate, LocalDate toDate, Long movieId) {
+
+        if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
+            throw new InvalidBookingException(
+                    "fromDate must be before or equal to toDate"
+            );
+        }
+
+        LocalDateTime fromTime = fromDate == null ? null : fromDate.atStartOfDay();
+
+        LocalDateTime toTime = toDate == null ? null : toDate.atTime(LocalTime.MAX);
+
+        List<BookingStatus> statusFilter = normalizeStatuses(status);
         
-//        Pageable pageable = PageRequest.of(page, size);
         Pageable pageable = createPageable(page, size);
 
-        Page<Booking> bookingPage = bookingRepository.findAll(pageable);
-
-        List<BookingResponseDTO> content = bookingPage.getContent()
-                .stream()
-                .map(booking -> bookingMapper.toResponseDTO(
-                        booking, getBookingSeats(booking)))
-                .toList();
-
-        return new PagedResponseDTO<>(
-                content,
-                bookingPage.getNumber(),
-                bookingPage.getSize(),
-                bookingPage.getTotalElements(),
-                bookingPage.getTotalPages(),
-                bookingPage.isLast()
+        Page<Booking> bookingPage = bookingRepository.findWithFilters(
+                null,
+                statusFilter,
+                fromTime,
+                toTime,
+                movieId,
+                pageable
         );
+
+        return toPagedResponse(bookingPage);
     }
 
     @Transactional
@@ -297,8 +291,6 @@ public class BookingService {
         // Get historical BookingSeat records
         List<BookingSeat> bookingSeats = getBookingSeats(booking);
 
-//        List<Seat> seatsToSave = new ArrayList<>();
-
         for (BookingSeat bookingSeat : bookingSeats) {
             bookingSeat.setStatus(BookingSeatStatus.CANCELLED);
 
@@ -308,17 +300,10 @@ public class BookingService {
             if (booking.equals(seat.getCurrentBooking())) {
                 seat.setStatus(SeatStatus.AVAILABLE);
                 seat.setCurrentBooking(null);
-//                seatsToSave.add(seat);
             }
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
-
-        // Hibernate dirty checking persists the managed entity changes.
-//        bookingSeatRepository.saveAll(bookingSeats);
-//        seatRepository.saveAll(seatsToSave);
-//
-//        Booking cancelledBooking = bookingRepository.save(booking);
 
         return bookingMapper.toResponseDTO(booking, bookingSeats);
 
@@ -340,5 +325,42 @@ public class BookingService {
         return bookingSeatRepository.findByBooking(booking);
     }
 
+    // helper method
+    private List<BookingStatus> normalizeStatuses(List<BookingStatus> statuses){
+        if(statuses == null || statuses.isEmpty()){
+            // Pass all statuses to avoid binding null/empty to IN.
+            return Arrays.asList(BookingStatus.values());
+        }
+        List<BookingStatus> validStatuses = statuses.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        if(validStatuses.isEmpty()){
+            return Arrays.asList(BookingStatus.values());
+        }
+
+        return validStatuses;
+    }
+
+    // helper method
+    private PagedResponseDTO<BookingResponseDTO> toPagedResponse(
+            Page<Booking> bookingPage
+    ) {
+        List<BookingResponseDTO> content = bookingPage.getContent()
+                .stream()
+                .map(booking -> bookingMapper.toResponseDTO(
+                        booking, getBookingSeats(booking)))
+                .toList();
+
+        return new PagedResponseDTO<>(
+                content,
+                bookingPage.getNumber(),
+                bookingPage.getSize(),
+                bookingPage.getTotalElements(),
+                bookingPage.getTotalPages(),
+                bookingPage.isLast()
+        );
+    }
 
 }

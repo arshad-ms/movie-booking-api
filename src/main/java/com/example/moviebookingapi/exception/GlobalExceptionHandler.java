@@ -12,6 +12,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.LocalDateTime;
 
@@ -136,6 +137,22 @@ public class GlobalExceptionHandler {
                 "Access Denied. You do not have permission to access this resource.",
                 request
         );
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatch(
+            MethodArgumentTypeMismatchException ex,
+            HttpServletRequest request
+    ) {
+        String parameter = ex.getName();
+
+        String value = ex.getValue() == null ? "null" : ex.getValue().toString();
+
+        String message = "Invalid value '" + value + "' for parameter '" + parameter + "'";
+
+        logger.warn("Invalid request parameter at {}: {}", request.getRequestURI(), message);
+
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, message, request);
     }
 
     @ExceptionHandler(Exception.class)

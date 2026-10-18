@@ -25,8 +25,10 @@ public class MovieController {
     }
 
     @GetMapping
-    public List<MovieResponseDTO> getMovies() {
-        return movieService.getMovies();
+    public List<MovieResponseDTO> getMovies(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String genre) {
+        return movieService.getMovies(search, genre);
     }
 
     @PutMapping("/{id}")

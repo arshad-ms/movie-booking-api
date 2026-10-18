@@ -33,8 +33,12 @@ public class MovieService {
         return movieMapper.toResponseDTO(savedMovie);
     }
 
-    public List<MovieResponseDTO> getMovies() {
-        return movieRepository.findAll()
+    public List<MovieResponseDTO> getMovies(String search, String genre) {
+
+        search = normalizeFilter(search);
+        genre = normalizeFilter(genre);
+
+        return movieRepository.searchMovies(search, genre)
                 .stream()
                 .map(movieMapper::toResponseDTO)
                 .toList();
@@ -65,6 +69,14 @@ public class MovieService {
         }
 
         movieRepository.deleteById(id);
+    }
+
+    // helper method
+    private String normalizeFilter(String value){
+        if(value == null || value.isBlank()){
+            return null;
+        }
+        return value.trim();
     }
 
 }
