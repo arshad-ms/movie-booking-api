@@ -4,7 +4,7 @@ import com.example.moviebookingapi.dto.MovieRequestDTO;
 import com.example.moviebookingapi.dto.MovieResponseDTO;
 import com.example.moviebookingapi.service.MovieService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -13,10 +13,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/movies")
+@RequiredArgsConstructor
 public class MovieController {
 
-    @Autowired
-    private MovieService movieService;
+    private final MovieService movieService;
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -43,6 +43,5 @@ public class MovieController {
     public void deleteMovie(@PathVariable Long id) {
         movieService.deleteMovie(id);
     }
-
 
 }

@@ -7,8 +7,6 @@ import com.example.moviebookingapi.model.Screen;
 import com.example.moviebookingapi.model.Showtime;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-
 @Component
 public class ShowtimeMapper {
 
@@ -22,7 +20,7 @@ public class ShowtimeMapper {
         );
     }
 
-    public ShowtimeResponseDTO toResponseDTO(Showtime showtime, long availableSeatCount){
+    public ShowtimeResponseDTO toResponseDTO(Showtime showtime, long availableSeatCount) {
         return new ShowtimeResponseDTO(
                 showtime.getId(),
                 showtime.getMovie().getId(),

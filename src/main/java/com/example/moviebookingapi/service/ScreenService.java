@@ -10,40 +10,33 @@ import com.example.moviebookingapi.model.SeatStatus;
 import com.example.moviebookingapi.model.Theater;
 import com.example.moviebookingapi.repository.ScreenRepository;
 import com.example.moviebookingapi.repository.TheaterRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class ScreenService {
 
-    @Autowired
-    private ScreenRepository screenRepository;
+    private final ScreenRepository screenRepository;
+    private final TheaterRepository theaterRepository;
+    private final ScreenMapper screenMapper;
 
-    @Autowired
-    private TheaterRepository theaterRepository;
-
-    @Autowired
-    private ScreenMapper screenMapper;
-
+    @Transactional
     public ScreenResponseDTO createScreen(ScreenRequestDTO screenRequestDTO) {
-        Theater theatre = theaterRepository.findById(screenRequestDTO.getTheatreId())
-                .orElseThrow(() -> new ResourceNotFoundException("Theatre " + screenRequestDTO.getTheatreId() + " not found"));
+        Theater theater = theaterRepository.findById(screenRequestDTO.getTheaterId())
+                .orElseThrow(() -> new ResourceNotFoundException("Theater " + screenRequestDTO.getTheaterId() + " not found"));
 
-        Screen screen = screenMapper.toEntity(screenRequestDTO, theatre);
+        Screen screen = screenMapper.toEntity(screenRequestDTO, theater);
 
-        // Auto-generate seats (e.g., A1, A2... B1, B2...)
         List<Seat> seats = new ArrayList<>();
-
         int totalSeats = screenRequestDTO.getTotalSeats();
-
-        // 10 seats per row
         int rows = (int) Math.ceil(totalSeats / 10.0);
 
         for (int row = 0; row < rows; row++) {
-
             char rowLetter = (char) ('A' + row);
             int seatsInThisRow = Math.min(10, totalSeats - (row * 10));
 

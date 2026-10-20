@@ -7,7 +7,7 @@ import com.example.moviebookingapi.dto.RegisterResponse;
 import com.example.moviebookingapi.model.User;
 import com.example.moviebookingapi.service.AuthService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,15 +17,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
-    @Autowired
-    private AuthService authService;
+    private final AuthService authService;
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest) {
 
-        String token = authService.login(loginRequest.getEmail(),  loginRequest.getPassword());
+        String token = authService.login(loginRequest.getEmail(), loginRequest.getPassword());
 
         return ResponseEntity.ok(new LoginResponse(token));
     }

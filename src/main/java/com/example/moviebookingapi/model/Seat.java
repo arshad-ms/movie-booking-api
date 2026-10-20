@@ -1,6 +1,5 @@
 package com.example.moviebookingapi.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -34,4 +33,3 @@ public class Seat {
     private Booking currentBooking;
 
 }
-

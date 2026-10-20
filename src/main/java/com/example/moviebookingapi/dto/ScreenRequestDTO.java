@@ -13,7 +13,7 @@ public class ScreenRequestDTO {
 
     @NotNull
     @Positive
-    private Long theatreId;
+    private Long theaterId;
 
     @NotNull
     @Positive

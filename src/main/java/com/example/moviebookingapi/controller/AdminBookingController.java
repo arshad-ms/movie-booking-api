@@ -4,7 +4,7 @@ import com.example.moviebookingapi.dto.BookingResponseDTO;
 import com.example.moviebookingapi.dto.PagedResponseDTO;
 import com.example.moviebookingapi.model.BookingStatus;
 import com.example.moviebookingapi.service.BookingService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -15,10 +15,10 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/admin/bookings")
 @PreAuthorize("hasRole('ADMIN')")
+@RequiredArgsConstructor
 public class AdminBookingController {
 
-    @Autowired
-    private BookingService bookingService;
+    private final BookingService bookingService;
 
     @GetMapping
     public PagedResponseDTO<BookingResponseDTO> getAllBookings(

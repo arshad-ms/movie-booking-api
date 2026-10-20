@@ -4,7 +4,6 @@ import com.example.moviebookingapi.dto.SeatResponseDTO;
 import com.example.moviebookingapi.model.Seat;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Component

@@ -9,32 +9,30 @@ import com.example.moviebookingapi.model.Movie;
 import com.example.moviebookingapi.repository.MovieRepository;
 import com.example.moviebookingapi.repository.ShowtimeRepository;
 import com.example.moviebookingapi.specification.MovieSpecification;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class MovieService {
 
-    @Autowired
-    private MovieRepository movieRepository;
+    private final MovieRepository movieRepository;
+    private final ShowtimeRepository showtimeRepository;
+    private final MovieMapper movieMapper;
 
-    @Autowired
-    private ShowtimeRepository showtimeRepository;
-
-    @Autowired
-    private MovieMapper movieMapper;
-
+    @Transactional
     public MovieResponseDTO createMovie(MovieRequestDTO movieRequestDTO) {
-
         Movie movie = movieMapper.toEntity(movieRequestDTO);
         Movie savedMovie = movieRepository.save(movie);
 
         return movieMapper.toResponseDTO(savedMovie);
     }
 
+    @Transactional(readOnly = true)
     public List<MovieResponseDTO> getMovies(String search, String genre) {
 
         search = normalizeFilter(search);
@@ -51,9 +49,10 @@ public class MovieService {
                 .toList();
     }
 
+    @Transactional
     public MovieResponseDTO updateMovie(Long id, MovieRequestDTO movieRequestDTO) {
         Movie movie = movieRepository.findById(id).orElseThrow(
-                ()-> new ResourceNotFoundException("Movie not found with id " + id)
+                () -> new ResourceNotFoundException("Movie not found with id " + id)
         );
 
         movie.setTitle(movieRequestDTO.getTitle());
@@ -65,22 +64,22 @@ public class MovieService {
         return movieMapper.toResponseDTO(updatedMovie);
     }
 
+    @Transactional
     public void deleteMovie(Long id) {
-        Movie movie = movieRepository.findById(id).orElseThrow(
-                ()-> new ResourceNotFoundException("Movie not found with id " + id)
-        );
+        if (!movieRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Movie not found with id " + id);
+        }
 
         boolean movieHasShowtimes = showtimeRepository.existsByMovieId(id);
-        if (movieHasShowtimes){
-            throw new MovieInUseException( "Cannot delete movie with id " + id + " because it has associated showtimes");
+        if (movieHasShowtimes) {
+            throw new MovieInUseException("Cannot delete movie with id " + id + " because it has associated showtimes");
         }
 
         movieRepository.deleteById(id);
     }
 
-    // helper method
-    private String normalizeFilter(String value){
-        if(value == null || value.isBlank()){
+    private String normalizeFilter(String value) {
+        if (value == null || value.isBlank()) {
             return null;
         }
         return value.trim();

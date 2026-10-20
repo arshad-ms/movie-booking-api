@@ -7,11 +7,11 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class TheaterMapper {
-    public Theater toEntity(TheaterRequestDTO theatreRequestDTO) {
+    public Theater toEntity(TheaterRequestDTO theaterRequestDTO) {
         return new Theater(
                 null,
-                theatreRequestDTO.getName(),
-                theatreRequestDTO.getLocation(),
+                theaterRequestDTO.getName(),
+                theaterRequestDTO.getLocation(),
                 null
         );
     }

@@ -12,7 +12,7 @@ public class ScreenResponseDTO {
     private Long id;
     private Integer screenNumber;
     private Integer totalSeats;
-    private Long theatreId;
-    private String theatreName;
+    private Long theaterId;
+    private String theaterName;
     private Integer seatCount;
 }

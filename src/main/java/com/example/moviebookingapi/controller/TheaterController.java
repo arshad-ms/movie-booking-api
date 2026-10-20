@@ -4,7 +4,7 @@ import com.example.moviebookingapi.dto.TheaterRequestDTO;
 import com.example.moviebookingapi.dto.TheaterResponseDTO;
 import com.example.moviebookingapi.service.TheaterService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -13,14 +13,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/theaters")
+@RequiredArgsConstructor
 public class TheaterController {
 
-    @Autowired
-    private TheaterService theatreService;
+    private final TheaterService theaterService;
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public TheaterResponseDTO createTheatre(@Valid @RequestBody TheaterRequestDTO theatreRequestDTO) {
-        return theatreService.createTheater(theatreRequestDTO);
+    public TheaterResponseDTO createTheater(@Valid @RequestBody TheaterRequestDTO theaterRequestDTO) {
+        return theaterService.createTheater(theaterRequestDTO);
     }
 }
